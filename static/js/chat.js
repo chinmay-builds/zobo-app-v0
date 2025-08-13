@@ -5,6 +5,9 @@ class ChatApp {
         this.sendBtn = document.getElementById('sendBtn');
         this.clearBtn = document.getElementById('clearBtn');
         this.statusBtn = document.getElementById('statusBtn');
+        this.voiceStatusBtn = document.getElementById('voiceStatusBtn');
+        this.recordBtn = document.getElementById('recordBtn');
+        this.speakBtn = document.getElementById('speakBtn');
         this.oneDriveBtn = document.getElementById('oneDriveBtn');
         
 
@@ -24,9 +27,16 @@ class ChatApp {
         this.attachedFiles = [];
         this.attachedLinks = [];
         
+        // Voice functionality
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.voiceEnabled = false;
+        
         this.initializeEventListeners();
         this.loadConversationHistory();
         this.checkApiStatus();
+        this.checkVoiceStatus();
     }
     
     initializeEventListeners() {
@@ -85,6 +95,19 @@ class ChatApp {
         
         // Check for calendar connection status
         this.checkCalendarStatus();
+        
+        // Voice functionality
+        this.voiceStatusBtn.addEventListener('click', () => {
+            this.checkVoiceStatus();
+        });
+        
+        this.recordBtn.addEventListener('click', () => {
+            this.toggleRecording();
+        });
+        
+        this.speakBtn.addEventListener('click', () => {
+            this.speakLastMessage();
+        });
     }
     
     async sendMessage() {
@@ -134,44 +157,45 @@ class ChatApp {
     
     addMessage(content, type) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message-bubble ${type}-message mb-3`;
+        messageDiv.className = `message ${type}-message`;
         
         const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         if (type === 'user') {
             messageDiv.innerHTML = `
-                <div class="d-flex align-items-start flex-row-reverse">
-                    <div class="avatar bg-primary rounded-circle ms-3 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-user text-white"></i>
+                <div class="message-avatar">
+                    <div class="avatar-circle">
+                        <i class="fas fa-user"></i>
                     </div>
-                    <div class="message-content text-end">
-                        <div class="message-header mb-1">
-                            <small class="text-muted me-2">${currentTime}</small>
-                            <strong>You</strong>
-                        </div>
-                        <div class="message-text">
-                            ${this.formatMessage(content)}
-                        </div>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-name">You</span>
+                        <span class="message-time">${currentTime}</span>
+                    </div>
+                    <div class="message-text">
+                        ${this.formatMessage(content)}
                     </div>
                 </div>
             `;
         } else {
             const iconClass = type === 'error' ? 'fas fa-exclamation-triangle' : 'fas fa-robot';
             const name = type === 'error' ? 'System' : 'Zobo';
+            const messageType = type === 'error' ? 'error' : 'assistant';
             
             messageDiv.innerHTML = `
-                <div class="d-flex align-items-start">
-                    <div class="avatar bg-info rounded-circle me-3 d-flex align-items-center justify-content-center">
-                        <i class="${iconClass} text-white"></i>
+                <div class="message-avatar">
+                    <div class="avatar-circle">
+                        <i class="${iconClass}"></i>
                     </div>
-                    <div class="message-content">
-                        <div class="message-header mb-1">
-                            <strong>${name}</strong>
-                            <small class="text-muted ms-2">${currentTime}</small>
-                        </div>
-                        <div class="message-text">
-                            ${this.formatMessage(content)}
-                        </div>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-name">${name}</span>
+                        <span class="message-time">${currentTime}</span>
+                    </div>
+                    <div class="message-text">
+                        ${this.formatMessage(content)}
                     </div>
                 </div>
             `;
@@ -212,19 +236,21 @@ class ChatApp {
         const count = this.messageInput.value.length;
         this.charCount.textContent = count;
         
+        const charCountElement = this.charCount.parentElement;
+        
         if (count > 1800) {
-            this.charCount.parentElement.classList.add('text-warning');
+            charCountElement.style.color = '#fbbf24'; // warning color
         } else if (count >= 2000) {
-            this.charCount.parentElement.classList.add('text-danger');
-            this.charCount.parentElement.classList.remove('text-warning');
+            charCountElement.style.color = '#ef4444'; // danger color
         } else {
-            this.charCount.parentElement.classList.remove('text-warning', 'text-danger');
+            charCountElement.style.color = '#9aa0a6'; // default color
         }
     }
     
     autoResizeTextarea() {
         this.messageInput.style.height = 'auto';
-        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
+        const newHeight = Math.min(this.messageInput.scrollHeight, 120);
+        this.messageInput.style.height = newHeight + 'px';
     }
     
     async clearConversation() {
@@ -301,7 +327,7 @@ class ChatApp {
             'info': 'alert-info'
         };
         
-        this.statusAlert.className = `alert ${alertTypes[type]} alert-dismissible fade show`;
+        this.statusAlert.className = `status-alert ${alertTypes[type]} d-none`;
         this.statusMessage.textContent = message;
         this.statusAlert.classList.remove('d-none');
         
@@ -662,6 +688,242 @@ class ChatApp {
             console.error('Error fetching calendar events:', error);
             return [];
         }
+    }
+    
+    // Voice functionality methods
+    async checkVoiceStatus() {
+        try {
+            const response = await fetch('/api/voice/status');
+            const data = await response.json();
+            
+            if (data.configured) {
+                this.voiceEnabled = true;
+                this.showStatusAlert('success', `Gemini Live API is ready! Model: ${data.model}`);
+                this.recordBtn.disabled = false;
+                this.speakBtn.disabled = false;
+            } else {
+                this.voiceEnabled = false;
+                this.showStatusAlert('warning', 'Gemini Live API not configured. Voice features will be disabled.');
+                this.recordBtn.disabled = true;
+                this.speakBtn.disabled = true;
+            }
+        } catch (error) {
+            console.error('Error checking voice status:', error);
+            this.voiceEnabled = false;
+            this.showStatusAlert('error', 'Failed to check Gemini Live API status');
+        }
+    }
+    
+    async toggleRecording() {
+        if (!this.voiceEnabled) {
+            this.showStatusAlert('warning', 'Gemini Live API not configured');
+            return;
+        }
+        
+        if (this.isRecording) {
+            this.stopRecording();
+        } else {
+            this.startRecording();
+        }
+    }
+    
+    async startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                } 
+            });
+            
+            this.mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            this.audioChunks = [];
+            
+            this.mediaRecorder.ondataavailable = (event) => {
+                this.audioChunks.push(event.data);
+            };
+            
+            this.mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                await this.processAudioRecording(audioBlob);
+            };
+            
+            this.mediaRecorder.start();
+            this.isRecording = true;
+            this.recordBtn.classList.add('recording');
+            this.recordBtn.innerHTML = '<i class="fas fa-stop"></i>';
+            this.recordBtn.title = 'Stop recording';
+            
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            this.showStatusAlert('error', 'Failed to start recording. Please check microphone permissions.');
+        }
+    }
+    
+    stopRecording() {
+        if (this.mediaRecorder && this.isRecording) {
+            this.mediaRecorder.stop();
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            this.isRecording = false;
+            this.recordBtn.classList.remove('recording');
+            this.recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            this.recordBtn.title = 'Record voice message';
+        }
+    }
+    
+    async processAudioRecording(audioBlob) {
+        try {
+            this.showStatusAlert('🎤 Processing voice message...', 'info');
+            
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            
+            const response = await fetch('/api/voice/live-conversation', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (data.audio) {
+                    // Play the audio response
+                    const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
+                    audio.play();
+                    
+                    // Add the message to chat
+                    this.addMessage(data.message, 'assistant');
+                    this.showStatusAlert('🎤 Voice message processed successfully!', 'success');
+                } else {
+                    // Add text response without audio
+                    this.addMessage(data.message || 'Voice processed but no audio response available.', 'assistant');
+                    this.showStatusAlert('💬 Voice converted to text successfully!', 'success');
+                }
+            } else {
+                if (data.fallback) {
+                    this.showStatusAlert('⚠️ Voice features temporarily unavailable. Please use text chat.', 'warning');
+                } else {
+                    this.showStatusAlert(`❌ Voice processing failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Voice processing error:', error);
+            this.showStatusAlert('❌ Voice processing failed. Please try again.', 'error');
+        }
+    }
+    
+    async speakLastMessage() {
+        try {
+            const messages = this.messagesArea.querySelectorAll('.message');
+            if (messages.length === 0) return;
+            
+            const lastAssistantMessage = Array.from(messages).reverse().find(msg => 
+                msg.classList.contains('assistant')
+            );
+            
+            if (!lastAssistantMessage) {
+                this.showStatusAlert('💬 No assistant message to speak', 'info');
+                return;
+            }
+            
+            const messageText = lastAssistantMessage.querySelector('.message-text').textContent;
+            await this.speakText(messageText);
+            
+        } catch (error) {
+            console.error('Error speaking last message:', error);
+            this.showStatusAlert('❌ Failed to speak message', 'error');
+        }
+    }
+
+    async speakText(text) {
+        try {
+            this.showStatusAlert('🔊 Converting text to speech...', 'info');
+            
+            const response = await fetch('/api/voice/speak', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (data.audio) {
+                    // Play the audio
+                    const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
+                    audio.play();
+                    this.showStatusAlert('🔊 Playing audio response...', 'success');
+                } else {
+                    this.showStatusAlert('💬 Text-to-speech is available but audio generation is temporarily disabled', 'info');
+                }
+            } else {
+                this.showStatusAlert(`❌ Text-to-speech failed: ${data.error || 'Unknown error'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error speaking text:', error);
+            this.showStatusAlert('❌ Failed to convert text to speech', 'error');
+        }
+    }
+    
+    async sendVoiceMessage(text) {
+        try {
+            const response = await fetch('/api/voice/chat-async', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: text,
+                    history: this.getConversationHistory()
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.audio) {
+                // Play the audio response
+                const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
+                audio.play();
+                
+                // Add the message to chat
+                this.addMessage(text, 'user');
+                this.addMessage('Voice response generated', 'assistant');
+                
+                return true;
+            } else {
+                console.error('Voice chat failed:', data.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error sending voice message:', error);
+            return false;
+        }
+    }
+    
+    getConversationHistory() {
+        // Get conversation history for context
+        const messages = [];
+        const messageElements = this.messagesArea.querySelectorAll('.message');
+        
+        messageElements.forEach(element => {
+            const text = element.querySelector('.message-text')?.textContent || '';
+            const isUser = element.classList.contains('user-message');
+            
+            if (text.trim()) {
+                messages.push({
+                    role: isUser ? 'user' : 'assistant',
+                    content: text.trim()
+                });
+            }
+        });
+        
+        return messages.slice(-10); // Keep last 10 messages for context
     }
 }
 

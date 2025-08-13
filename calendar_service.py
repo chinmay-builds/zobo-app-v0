@@ -57,7 +57,7 @@ class GoogleCalendarService:
                 time_max = (datetime.utcnow() + timedelta(days=7)).isoformat() + 'Z'
             
             events_result = self.service.events().list(
-                calendarId='primary',
+                calendarId='CALENDAR ID',
                 timeMin=time_min,
                 timeMax=time_max,
                 maxResults=max_results,
@@ -109,7 +109,7 @@ class GoogleCalendarService:
                 },
             }
             
-            event = self.service.events().insert(calendarId='primary', body=event).execute()
+            event = self.service.events().insert(calendarId=CALENDAR ID, body=event).execute()
             return event
             
         except HttpError as error:
@@ -123,7 +123,7 @@ class GoogleCalendarService:
         
         try:
             # Get the existing event
-            event = self.service.events().get(calendarId='primary', eventId=event_id).execute()
+            event = self.service.events().get(calendarId=CALENDAR ID, eventId=event_id).execute()
             
             # Update fields if provided
             if summary:
@@ -150,7 +150,7 @@ class GoogleCalendarService:
             return False
         
         try:
-            self.service.events().delete(calendarId='primary', eventId=event_id).execute()
+            self.service.events().delete(calendarId=CALENDAR ID, eventId=event_id).execute()
             return True
             
         except HttpError as error:
