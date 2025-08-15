@@ -137,7 +137,7 @@ class GoogleCalendarService:
             if end_time:
                 event['end'] = {'dateTime': end_time, 'timeZone': 'UTC'}
             
-            updated_event = self.service.events().update(calendarId='primary', eventId=event_id, body=event).execute()
+            updated_event = self.service.events().update(calendarId=CALENDAR ID, eventId=event_id, body=event).execute()
             return updated_event
             
         except HttpError as error:
