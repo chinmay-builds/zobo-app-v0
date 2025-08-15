@@ -11,6 +11,7 @@ import json
 
 # Scopes for Google Calendar API
 SCOPES = ['https://www.googleapis.com/auth/calendar']
+CALENDAR_ID = '35b16f711410d3a53db69da560c7b50107d4a4f0397ef90e2f3c251091f54358@group.calendar.google.com'
 
 class GoogleCalendarService:
     def __init__(self):
@@ -57,7 +58,7 @@ class GoogleCalendarService:
                 time_max = (datetime.utcnow() + timedelta(days=7)).isoformat() + 'Z'
             
             events_result = self.service.events().list(
-                calendarId='CALENDAR ID',
+                calendarId=CALENDAR_ID,
                 timeMin=time_min,
                 timeMax=time_max,
                 maxResults=max_results,
@@ -109,7 +110,7 @@ class GoogleCalendarService:
                 },
             }
             
-            event = self.service.events().insert(calendarId=CALENDAR ID, body=event).execute()
+            event = self.service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
             return event
             
         except HttpError as error:
@@ -123,7 +124,7 @@ class GoogleCalendarService:
         
         try:
             # Get the existing event
-            event = self.service.events().get(calendarId=CALENDAR ID, eventId=event_id).execute()
+            event = self.service.events().get(calendarId=CALENDAR_ID, eventId=event_id).execute()
             
             # Update fields if provided
             if summary:
@@ -137,7 +138,7 @@ class GoogleCalendarService:
             if end_time:
                 event['end'] = {'dateTime': end_time, 'timeZone': 'UTC'}
             
-            updated_event = self.service.events().update(calendarId=CALENDAR ID, eventId=event_id, body=event).execute()
+            updated_event = self.service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=event).execute()
             return updated_event
             
         except HttpError as error:
@@ -150,9 +151,8 @@ class GoogleCalendarService:
             return False
         
         try:
-            self.service.events().delete(calendarId=CALENDAR ID, eventId=event_id).execute()
+            self.service.events().delete(calendarId=CALENDAR_ID, eventId=event_id).execute()
             return True
-            
         except HttpError as error:
             logging.error(f"Error deleting calendar event: {error}")
             return False
