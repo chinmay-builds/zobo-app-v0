@@ -11,7 +11,7 @@ import json
 
 # Scopes for Google Calendar API
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-CALENDAR_ID = '35b16f711410d3a53db69da560c7b50107d4a4f0397ef90e2f3c251091f54358@group.calendar.google.com'
+CALENDAR_ID = 'https://calendar.google.com/calendar/u/0?cid=c2Fpc3VuZGFyLmNoaW5tYXlAZ21haWwuY29t'
 
 class GoogleCalendarService:
     def __init__(self):
