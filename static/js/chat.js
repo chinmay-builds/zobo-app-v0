@@ -23,9 +23,18 @@ class ChatApp {
         this.addLinkBtn = document.getElementById('addLinkBtn');
         this.fileInput = document.getElementById('fileInput');
         
+        // Authentication elements
+        this.googleSignInBtn = document.getElementById('googleSignInBtn');
+        this.signOutBtn = document.getElementById('signOutBtn');
+        this.userInfo = document.getElementById('userInfo');
+        this.signInContainer = document.getElementById('signInContainer');
+        this.userAvatar = document.getElementById('userAvatar');
+        this.userName = document.getElementById('userName');
+        
         this.isLoading = false;
         this.attachedFiles = [];
         this.attachedLinks = [];
+        this.currentUser = null;
         
         // Voice functionality
         this.isRecording = false;
@@ -37,6 +46,8 @@ class ChatApp {
         this.loadConversationHistory();
         this.checkApiStatus();
         this.checkVoiceStatus();
+        this.initializeGoogleAuth();
+        this.checkAuthStatus();
     }
     
     initializeEventListeners() {
@@ -108,6 +119,19 @@ class ChatApp {
         this.speakBtn.addEventListener('click', () => {
             this.speakLastMessage();
         });
+        
+        // Authentication functionality
+        if (this.googleSignInBtn) {
+            this.googleSignInBtn.addEventListener('click', () => {
+                this.handleGoogleSignIn();
+            });
+        }
+        
+        if (this.signOutBtn) {
+            this.signOutBtn.addEventListener('click', () => {
+                this.handleSignOut();
+            });
+        }
     }
     
     async sendMessage() {
@@ -924,6 +948,142 @@ class ChatApp {
         });
         
         return messages.slice(-10); // Keep last 10 messages for context
+    }
+    
+    // Google Authentication Methods
+    async initializeGoogleAuth() {
+        // Wait for Google Identity Services to load
+        if (typeof google !== 'undefined' && google.accounts) {
+            const googleClientId = document.body.dataset.googleClientId || window.GOOGLE_CLIENT_ID;
+            if (googleClientId && googleClientId !== 'your-google-client-id-here') {
+                google.accounts.id.initialize({
+                    client_id: googleClientId,
+                    callback: this.handleCredentialResponse.bind(this)
+                });
+            }
+        }
+    }
+    
+    handleCredentialResponse(response) {
+        // Send the credential to the backend for verification
+        this.verifyGoogleToken(response.credential);
+    }
+    
+    async handleGoogleSignIn() {
+        try {
+            const googleClientId = document.body.dataset.googleClientId || window.GOOGLE_CLIENT_ID;
+            if (!googleClientId || googleClientId === 'your-google-client-id-here') {
+                this.showStatusAlert('Google Sign-In not configured. Please check documentation.', 'warning');
+                return;
+            }
+            
+            // Use Google Identity Services prompt
+            google.accounts.id.prompt();
+        } catch (error) {
+            console.error('Error initiating Google Sign-In:', error);
+            this.showStatusAlert('Failed to initiate Google Sign-In', 'error');
+        }
+    }
+    
+    async verifyGoogleToken(credential) {
+        try {
+            const response = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ credential })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                this.currentUser = data.user;
+                this.updateUIForSignedInUser(data.user);
+                this.showStatusAlert(`Welcome, ${data.user.name}!`, 'success');
+            } else {
+                console.error('Token verification failed:', data.error);
+                this.showStatusAlert(`Sign-in failed: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error verifying Google token:', error);
+            this.showStatusAlert('Sign-in failed due to network error', 'error');
+        }
+    }
+    
+    async handleSignOut() {
+        try {
+            const response = await fetch('/api/auth/signout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                this.currentUser = null;
+                this.updateUIForSignedOutUser();
+                this.showStatusAlert('Successfully signed out', 'success');
+                
+                // Also sign out from Google
+                if (typeof google !== 'undefined' && google.accounts) {
+                    google.accounts.id.disableAutoSelect();
+                }
+            } else {
+                this.showStatusAlert('Sign-out failed', 'error');
+            }
+        } catch (error) {
+            console.error('Error signing out:', error);
+            this.showStatusAlert('Sign-out failed due to network error', 'error');
+        }
+    }
+    
+    async checkAuthStatus() {
+        try {
+            const response = await fetch('/api/auth/status');
+            const data = await response.json();
+            
+            if (data.authenticated) {
+                this.currentUser = data.user;
+                this.updateUIForSignedInUser(data.user);
+            } else {
+                this.updateUIForSignedOutUser();
+            }
+        } catch (error) {
+            console.error('Error checking auth status:', error);
+            this.updateUIForSignedOutUser();
+        }
+    }
+    
+    updateUIForSignedInUser(user) {
+        // Show user info, hide sign-in button
+        if (this.userInfo) {
+            this.userInfo.classList.remove('d-none');
+        }
+        if (this.signInContainer) {
+            this.signInContainer.classList.add('d-none');
+        }
+        
+        // Update user info
+        if (this.userName) {
+            this.userName.textContent = user.name;
+        }
+        if (this.userAvatar && user.picture) {
+            this.userAvatar.src = user.picture;
+            this.userAvatar.alt = user.name;
+        }
+    }
+    
+    updateUIForSignedOutUser() {
+        // Hide user info, show sign-in button
+        if (this.userInfo) {
+            this.userInfo.classList.add('d-none');
+        }
+        if (this.signInContainer) {
+            this.signInContainer.classList.remove('d-none');
+        }
     }
 }
 

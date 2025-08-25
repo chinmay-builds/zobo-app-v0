@@ -582,3 +582,51 @@ body {
     border-color: #16a34a;
     color: #86efac;
 }
+
+/* User Authentication Styles */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 12px;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #4285f4;
+}
+
+.user-name {
+    color: #e8eaed;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sign-in-container {
+    margin-right: 12px;
+}
+
+#googleSignInBtn {
+    background: #4285f4;
+    color: white;
+}
+
+#googleSignInBtn:hover {
+    background: #3367d6;
+}
+
+#signOutBtn {
+    background: transparent;
+    color: #9aa0a6;
+}
+
+#signOutBtn:hover {
+    background: #3c3c3c;
+    color: #e8eaed;
+}

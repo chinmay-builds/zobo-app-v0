@@ -17,6 +17,9 @@
     <!-- Google Drive Picker API -->
     <script src="https://apis.google.com/js/api.js"></script>
     
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
 </head>
@@ -35,6 +38,22 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <!-- User Info (when signed in) -->
+                    <div id="userInfo" class="user-info d-none">
+                        <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+                        <span id="userName" class="user-name">User Name</span>
+                        <button class="action-btn" id="signOutBtn" title="Sign out">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Google Sign In Button (when not signed in) -->
+                    <div id="signInContainer" class="sign-in-container">
+                        <button class="action-btn" id="googleSignInBtn" title="Sign in with Google">
+                            <i class="fab fa-google"></i>
+                        </button>
+                    </div>
+                    
                     <button class="action-btn" id="voiceStatusBtn" title="Voice API Status">
                         <i class="fas fa-microphone"></i>
                     </button>
@@ -148,6 +167,11 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Configuration -->
+    <script>
+        window.GOOGLE_CLIENT_ID = "{{ google_client_id }}";
+    </script>
     
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>

@@ -43,6 +43,13 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_LIVE_MODEL = "gemini-2.5-flash-preview-native-audio-dialog"  # Native audio model
 # Alternative: "gemini-live-2.5-flash-preview" for half-cascade model
 
+# Google OAuth configuration
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+
+# Import Google OAuth libraries
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
 class GeminiLiveAPI:
     def __init__(self, api_key):
         self.api_key = api_key
@@ -205,7 +212,95 @@ def index():
     if 'conversation' not in session:
         session['conversation'] = []
     
-    return render_template('index.html')
+    # Pass Google Client ID to template
+    google_client_id = GOOGLE_CLIENT_ID or ""
+    return render_template('index.html', google_client_id=google_client_id)
+
+@app.route('/api/auth/google', methods=['POST'])
+def google_auth():
+    """Verify Google OAuth token and create user session"""
+    try:
+        data = request.get_json()
+        token = data.get('credential')
+        
+        if not token:
+            return jsonify({'error': 'No credential provided'}), 400
+        
+        if not GOOGLE_CLIENT_ID:
+            return jsonify({'error': 'Google OAuth not configured'}), 500
+        
+        # Verify the token
+        try:
+            idinfo = id_token.verify_oauth2_token(
+                token, google_requests.Request(), GOOGLE_CLIENT_ID)
+            
+            # Check if token is valid
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                return jsonify({'error': 'Invalid token issuer'}), 400
+            
+            # Extract user information
+            user_info = {
+                'id': idinfo['sub'],
+                'email': idinfo['email'],
+                'name': idinfo.get('name', idinfo['email']),
+                'picture': idinfo.get('picture', ''),
+                'verified_email': idinfo.get('email_verified', False)
+            }
+            
+            # Store user info in session (don't store the token)
+            session['user'] = user_info
+            session.modified = True
+            
+            logging.info(f"User signed in: {user_info['email']}")
+            
+            return jsonify({
+                'success': True,
+                'user': {
+                    'name': user_info['name'],
+                    'email': user_info['email'],
+                    'picture': user_info['picture']
+                }
+            })
+            
+        except ValueError as e:
+            logging.error(f"Token verification failed: {str(e)}")
+            return jsonify({'error': 'Invalid token'}), 400
+            
+    except Exception as e:
+        logging.error(f"Google auth error: {str(e)}")
+        return jsonify({'error': 'Authentication failed'}), 500
+
+@app.route('/api/auth/signout', methods=['POST'])
+def signout():
+    """Sign out user by clearing session"""
+    try:
+        user_email = session.get('user', {}).get('email', 'Unknown')
+        session.pop('user', None)
+        session.modified = True
+        
+        logging.info(f"User signed out: {user_email}")
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f"Sign out error: {str(e)}")
+        return jsonify({'error': 'Sign out failed'}), 500
+
+@app.route('/api/auth/status', methods=['GET'])
+def auth_status():
+    """Get current authentication status"""
+    user = session.get('user')
+    if user:
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'name': user['name'],
+                'email': user['email'],
+                'picture': user['picture']
+            }
+        })
+    else:
+        return jsonify({'authenticated': False})
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
