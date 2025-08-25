@@ -34,7 +34,8 @@ app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-prod
 # Moonshot API configuration
 MOONSHOT_API_KEY = os.environ.get("MOONSHOT_API_KEY")
 if not MOONSHOT_API_KEY:
-    MOONSHOT_API_KEY = "sk-84UZxWMiGx9LiiKcGwIC26ysh0sKCmj4EcbyBxZtfvIz4Vp3"  # Fallback to provided key
+    logging.warning("MOONSHOT_API_KEY not configured. Chat functionality will be disabled.")
+    MOONSHOT_API_KEY = None
 MOONSHOT_BASE_URL = "https://api.moonshot.ai/v1"
 MODEL_NAME = "kimi-k2-0711-preview"
 
@@ -883,8 +884,17 @@ def live_conversation():
             }), 500
         
         try:
-            # Process audio with Gemini Live API
-            response_text, audio_response, error = voice_client.process_audio_conversation(audio_data)
+            # Process audio with Gemini Live API using async wrapper
+            def process_async():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(voice_client.process_audio_conversation(audio_data))
+                finally:
+                    loop.close()
+            
+            future = executor.submit(process_async)
+            audio_response, error = future.result(timeout=30)
             
             if error:
                 logging.error(f"Live conversation error: {error}")
@@ -896,7 +906,7 @@ def live_conversation():
             
             # Return response
             result = {
-                'message': response_text,
+                'message': 'Voice processed successfully',
                 'status': 'success'
             }
             
