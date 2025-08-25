@@ -451,7 +451,7 @@ class ChatApp {
                 this.showStatusAlert('success', `📎 "${file.name}" is now connected to Zobo! You can reference it in conversations.`);
                 
                 // Add a system message to show file connection
-                this.addMessage(`📎 Connected file: ${file.name} (${this.formatFileSize(file.size)}) - Zobo can now access this file`, 'system');
+                this.addMessage(`📎 Connected file: ${file.name} (${(file.size/1024).toFixed(1)} KB) - Zobo can now access this file`, 'system');
             } else {
                 this.showStatusAlert('error', `❌ Failed to connect "${file.name}": ${data.error || 'Upload service unavailable'}`);
             }
