@@ -35,6 +35,9 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <button class="action-btn" id="wakewordToggleBtn" title="Toggle Wakeword Listening">
+                        <i class="fas fa-microphone-alt"></i>
+                    </button>
                     <button class="action-btn" id="voiceStatusBtn" title="Voice API Status">
                         <i class="fas fa-microphone"></i>
                     </button>
@@ -151,5 +154,6 @@
     
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/wakeword.js') }}"></script>
 </body>
 </html>
