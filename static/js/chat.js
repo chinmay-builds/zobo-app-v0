@@ -114,6 +114,15 @@ class ChatApp {
         const message = this.messageInput.value.trim();
         
         if (!message || this.isLoading) {
+            if (!message) {
+                this.showStatusAlert('warning', 'Please enter a message before sending.');
+            }
+            return;
+        }
+        
+        // Validate message length
+        if (message.length > 2000) {
+            this.showStatusAlert('error', 'Message is too long. Please keep it under 2000 characters.');
             return;
         }
         
@@ -309,13 +318,17 @@ class ChatApp {
             const data = await response.json();
             
             if (data.status === 'ok') {
-                this.showStatusAlert('success', `API is working properly. Model: ${data.model || 'Zobo'}`);
+                this.showStatusAlert('success', `✅ API is working properly. Model: ${data.model || 'Zobo'}`);
             } else {
-                this.showStatusAlert('warning', data.message);
+                if (data.api_configured === false) {
+                    this.showStatusAlert('error', `❌ ${data.message}. Please configure your API keys.`);
+                } else {
+                    this.showStatusAlert('warning', `⚠️ ${data.message}. Please check your internet connection and API configuration.`);
+                }
             }
         } catch (error) {
             console.error('Error checking API status:', error);
-            this.showStatusAlert('error', 'Failed to check API status');
+            this.showStatusAlert('error', '❌ Failed to check API status. Please check your internet connection.');
         }
     }
     
@@ -391,10 +404,26 @@ class ChatApp {
     handleFileSelection(files) {
         if (files.length === 0) return;
         
+        // Define allowed file extensions
+        const allowedExtensions = [
+            '.txt', '.md', '.py', '.js', '.html', '.css', '.json', '.xml', '.csv',
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+            '.jpg', '.jpeg', '.png', '.gif', '.svg',
+            '.log', '.cfg', '.conf', '.ini'
+        ];
+        
         // Upload files to connect them to Zobo instead of adding to chat
         Array.from(files).forEach(file => {
+            // Check file size
             if (file.size > 10 * 1024 * 1024) { // 10MB limit
                 this.showStatusAlert('warning', `File "${file.name}" is too large. Maximum size is 10MB.`);
+                return;
+            }
+            
+            // Check file extension
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(fileExtension)) {
+                this.showStatusAlert('warning', `File type "${fileExtension}" is not supported. Allowed types: ${allowedExtensions.join(', ')}`);
                 return;
             }
             
@@ -419,16 +448,16 @@ class ChatApp {
             const data = await response.json();
             
             if (response.ok) {
-                this.showStatusAlert('success', `"${file.name}" is now connected to Zobo! You can reference it in conversations.`);
+                this.showStatusAlert('success', `📎 "${file.name}" is now connected to Zobo! You can reference it in conversations.`);
                 
                 // Add a system message to show file connection
                 this.addMessage(`📎 Connected file: ${file.name} (${this.formatFileSize(file.size)}) - Zobo can now access this file`, 'system');
             } else {
-                this.showStatusAlert('error', `Failed to connect "${file.name}": ${data.error}`);
+                this.showStatusAlert('error', `❌ Failed to connect "${file.name}": ${data.error || 'Upload service unavailable'}`);
             }
         } catch (error) {
             console.error('File upload error:', error);
-            this.showStatusAlert('error', `Failed to connect "${file.name}": Network error`);
+            this.showStatusAlert('error', `❌ Failed to connect "${file.name}": Network error. Please check your connection.`);
         }
     }
     
@@ -616,11 +645,14 @@ class ChatApp {
             const response = await fetch('/api/calendar/events?days=1');
             if (response.ok) {
                 this.calendarConnected = true;
+                // Silently check - don't show success alert unless explicitly checking status
             } else {
                 this.calendarConnected = false;
+                console.log('Calendar not connected:', response.status);
             }
         } catch (error) {
             this.calendarConnected = false;
+            console.log('Calendar connection error:', error);
         }
     }
     
@@ -643,15 +675,15 @@ class ChatApp {
             const data = await response.json();
             
             if (response.ok) {
-                this.showStatusAlert('success', `Event "${summary}" scheduled successfully!`);
+                this.showStatusAlert('success', `📅 Event "${summary}" scheduled successfully!`);
                 return data.event;
             } else {
-                this.showStatusAlert('error', `Failed to schedule event: ${data.error}`);
+                this.showStatusAlert('error', `❌ Failed to schedule event: ${data.error || 'Calendar service unavailable'}`);
                 return null;
             }
         } catch (error) {
             console.error('Error scheduling event:', error);
-            this.showStatusAlert('error', 'Network error while scheduling event');
+            this.showStatusAlert('error', '❌ Network error while scheduling event. Please check your calendar connection.');
             return null;
         }
     }
@@ -698,19 +730,21 @@ class ChatApp {
             
             if (data.configured) {
                 this.voiceEnabled = true;
-                this.showStatusAlert('success', `Gemini Live API is ready! Model: ${data.model}`);
+                this.showStatusAlert('success', `🎤 Gemini Live API is ready! Model: ${data.model}`);
                 this.recordBtn.disabled = false;
                 this.speakBtn.disabled = false;
             } else {
                 this.voiceEnabled = false;
-                this.showStatusAlert('warning', 'Gemini Live API not configured. Voice features will be disabled.');
+                this.showStatusAlert('warning', '⚠️ Gemini Live API not configured. Voice features will be disabled. Please set up your GEMINI_API_KEY.');
                 this.recordBtn.disabled = true;
                 this.speakBtn.disabled = true;
             }
         } catch (error) {
             console.error('Error checking voice status:', error);
             this.voiceEnabled = false;
-            this.showStatusAlert('error', 'Failed to check Gemini Live API status');
+            this.showStatusAlert('error', '❌ Failed to check Gemini Live API status. Please check your internet connection.');
+            this.recordBtn.disabled = true;
+            this.speakBtn.disabled = true;
         }
     }
     

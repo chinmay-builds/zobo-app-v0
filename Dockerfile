@@ -26,6 +26,13 @@ COPY --from=builder /app /app
 EXPOSE 5000
 
 # Set environment variables
+# ⚠️ WARNING: The following environment variables use insecure default values!
+# 🔒 SECURITY NOTICE: For production deployments:
+#    1. Replace SESSION_SECRET with a strong, randomly generated secret
+#    2. Set your actual API keys (MOONSHOT_API_KEY, GEMINI_API_KEY)
+#    3. Use Docker secrets or environment variables instead of hardcoded values
+#    4. Never use default secrets in production!
+#
 # These are the variables from replit.md
 ENV SESSION_SECRET=a_secure_default_secret
 ENV FLASK_APP=app.py

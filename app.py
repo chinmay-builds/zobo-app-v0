@@ -41,6 +41,9 @@ MODEL_NAME = "kimi-k2-0711-preview"
 
 # Gemini Live API configuration
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    logging.warning("GEMINI_API_KEY not configured. Voice functionality will be disabled.")
+    GEMINI_API_KEY = None
 GEMINI_LIVE_MODEL = "gemini-2.5-flash-preview-native-audio-dialog"  # Native audio model
 # Alternative: "gemini-live-2.5-flash-preview" for half-cascade model
 
