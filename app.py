@@ -5,7 +5,11 @@ from flask import Flask, render_template, request, jsonify, session
 import requests
 from datetime import datetime, timedelta
 from dateutil import parser
-from calendar_service import GoogleCalendarService
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from auth import init_auth, create_auth_routes, require_auth, require_google_auth
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -193,6 +197,270 @@ class MoonshotAPI:
 # Initialize Moonshot API client
 moonshot_client = MoonshotAPI(MOONSHOT_API_KEY, MOONSHOT_BASE_URL) if MOONSHOT_API_KEY else None
 
+class GoogleCalendarService:
+    """Google Calendar service with proper OAuth authentication"""
+    
+    def __init__(self):
+        self.scopes = ['https://www.googleapis.com/auth/calendar']
+    
+    def get_service(self, user_session):
+        """Get authenticated Google Calendar service for the current user"""
+        if not user_session.get('user') or user_session['user'].get('provider') != 'google':
+            return None
+            
+        token_data = user_session.get('google_calendar_token')
+        if not token_data:
+            return None
+            
+        try:
+            credentials = Credentials(
+                token=token_data['access_token'],
+                refresh_token=token_data.get('refresh_token'),
+                token_uri='https://oauth2.googleapis.com/token',
+                client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+                client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+                scopes=self.scopes
+            )
+            
+            # Refresh token if needed
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(Request())
+                # Update session with new token
+                user_session['google_calendar_token']['access_token'] = credentials.token
+                user_session['google_calendar_token']['expires_at'] = credentials.expiry.timestamp() if credentials.expiry else None
+            
+            return build('calendar', 'v3', credentials=credentials)
+        except Exception as e:
+            logging.error(f"Error creating calendar service: {str(e)}")
+            return None
+    
+    def get_events(self, user_session, time_min=None, time_max=None, max_results=50):
+        """Get events from user's primary Google Calendar"""
+        service = self.get_service(user_session)
+        if not service:
+            return None
+        
+        try:
+            user_email = user_session['user']['email']
+            
+            # Default to next 7 days if no time range specified
+            if not time_min:
+                time_min = datetime.utcnow().isoformat() + 'Z'
+            if not time_max:
+                time_max = (datetime.utcnow() + timedelta(days=7)).isoformat() + 'Z'
+            
+            events_result = service.events().list(
+                calendarId=user_email,
+                timeMin=time_min,
+                timeMax=time_max,
+                maxResults=max_results,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            
+            events = events_result.get('items', [])
+            
+            # Format events for easier processing
+            formatted_events = []
+            for event in events:
+                start = event['start'].get('dateTime', event['start'].get('date'))
+                end = event['end'].get('dateTime', event['end'].get('date'))
+                
+                formatted_events.append({
+                    'id': event['id'],
+                    'summary': event.get('summary', 'No title'),
+                    'description': event.get('description', ''),
+                    'start': start,
+                    'end': end,
+                    'location': event.get('location', ''),
+                    'attendees': event.get('attendees', [])
+                })
+            
+            return formatted_events
+            
+        except HttpError as error:
+            logging.error(f"Error getting calendar events: {error}")
+            return None
+    
+    def create_event(self, user_session, summary, start_time, end_time, description="", location=""):
+        """Create a new event in user's primary Google Calendar"""
+        service = self.get_service(user_session)
+        if not service:
+            return None
+        
+        try:
+            user_email = user_session['user']['email']
+            
+            event = {
+                'summary': summary,
+                'description': description,
+                'location': location,
+                'start': {
+                    'dateTime': start_time,
+                    'timeZone': 'UTC',
+                },
+                'end': {
+                    'dateTime': end_time,
+                    'timeZone': 'UTC',
+                },
+            }
+            
+            event = service.events().insert(calendarId=user_email, body=event).execute()
+            return event
+            
+        except HttpError as error:
+            logging.error(f"Error creating calendar event: {error}")
+            return None
+    
+    def find_free_slots(self, user_session, duration_minutes, start_date=None, end_date=None, working_hours=(9, 17)):
+        """Find free time slots in the user's calendar"""
+        events = self.get_events(user_session, 
+                                time_min=start_date.isoformat() + 'Z' if start_date else None,
+                                time_max=end_date.isoformat() + 'Z' if end_date else None)
+        
+        if events is None:
+            return []
+        
+        try:
+            # Default to next 7 days if no date range specified
+            if not start_date:
+                start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            if not end_date:
+                end_date = start_date + timedelta(days=7)
+            
+            free_slots = []
+            current_date = start_date
+            
+            while current_date < end_date:
+                # Skip weekends (optional - can be made configurable)
+                if current_date.weekday() < 5:  # Monday = 0, Sunday = 6
+                    # Check each day for free slots
+                    day_start = current_date.replace(hour=working_hours[0], minute=0)
+                    day_end = current_date.replace(hour=working_hours[1], minute=0)
+                    
+                    # Get events for this day
+                    day_events = []
+                    for event in events:
+                        event_start = parser.parse(event['start'])
+                        event_end = parser.parse(event['end'])
+                        
+                        # Check if event overlaps with this day
+                        if (event_start.date() <= current_date.date() <= event_end.date()):
+                            day_events.append({
+                                'start': max(event_start, day_start),
+                                'end': min(event_end, day_end)
+                            })
+                    
+                    # Sort events by start time
+                    day_events.sort(key=lambda x: x['start'])
+                    
+                    # Find free slots
+                    current_time = day_start
+                    for event in day_events:
+                        if event['start'] > current_time:
+                            # There's a gap before this event
+                            gap_duration = (event['start'] - current_time).total_seconds() / 60
+                            if gap_duration >= duration_minutes:
+                                free_slots.append({
+                                    'start': current_time,
+                                    'end': event['start'],
+                                    'duration_minutes': gap_duration
+                                })
+                        current_time = max(current_time, event['end'])
+                    
+                    # Check for free time after the last event
+                    if current_time < day_end:
+                        gap_duration = (day_end - current_time).total_seconds() / 60
+                        if gap_duration >= duration_minutes:
+                            free_slots.append({
+                                'start': current_time,
+                                'end': day_end,
+                                'duration_minutes': gap_duration
+                            })
+                
+                current_date += timedelta(days=1)
+            
+            return free_slots
+            
+        except Exception as e:
+            logging.error(f"Error finding free slots: {str(e)}")
+            return []
+    
+    def update_event(self, user_session, event_id, summary=None, start_time=None, end_time=None, description=None, location=None):
+        """Update an existing event in user's Google Calendar"""
+        service = self.get_service(user_session)
+        if not service:
+            return None
+        
+        try:
+            user_email = user_session['user']['email']
+            
+            # Get the existing event
+            event = service.events().get(calendarId=user_email, eventId=event_id).execute()
+            
+            # Update fields if provided
+            if summary:
+                event['summary'] = summary
+            if description is not None:
+                event['description'] = description
+            if location is not None:
+                event['location'] = location
+            if start_time:
+                event['start'] = {'dateTime': start_time, 'timeZone': 'UTC'}
+            if end_time:
+                event['end'] = {'dateTime': end_time, 'timeZone': 'UTC'}
+            
+            updated_event = service.events().update(calendarId=user_email, eventId=event_id, body=event).execute()
+            return updated_event
+            
+        except HttpError as error:
+            logging.error(f"Error updating calendar event: {error}")
+            return None
+    
+    def delete_event(self, user_session, event_id):
+        """Delete an event from user's Google Calendar"""
+        service = self.get_service(user_session)
+        if not service:
+            return False
+        
+        try:
+            user_email = user_session['user']['email']
+            service.events().delete(calendarId=user_email, eventId=event_id).execute()
+            return True
+        except HttpError as error:
+            logging.error(f"Error deleting calendar event: {error}")
+            return False
+    
+    def smart_schedule_event(self, user_session, summary, duration_minutes, preferred_times=None, description="", location=""):
+        """Smart schedule an event by finding the best available slot"""
+        free_slots = self.find_free_slots(user_session, duration_minutes)
+        
+        if not free_slots:
+            return None, "No available time slots found"
+        
+        # If preferred times are specified, try to find slots that match
+        if preferred_times:
+            # This could be enhanced to match preferred times
+            pass
+        
+        # For now, suggest the first available slot
+        best_slot = free_slots[0]
+        suggested_start = best_slot['start']
+        suggested_end = suggested_start + timedelta(minutes=duration_minutes)
+        
+        return {
+            'suggested_start': suggested_start,
+            'suggested_end': suggested_end,
+            'summary': summary,
+            'description': description,
+            'location': location,
+            'alternative_slots': free_slots[:5]  # Provide up to 5 alternatives
+        }, None
+
+# Initialize OAuth
+oauth_clients = init_auth(app)
+create_auth_routes(app, oauth_clients)
+
 # Initialize Google Calendar service
 calendar_service = GoogleCalendarService()
 
@@ -200,6 +468,7 @@ calendar_service = GoogleCalendarService()
 voice_client = GeminiLiveAPI(GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 @app.route('/')
+@require_auth
 def index():
     """Main chat interface"""
     # Initialize session conversation if not exists
@@ -368,11 +637,13 @@ def api_status():
 def get_calendar_context():
     """Get current calendar context for AI assistant"""
     try:
-        if not calendar_service.service:
-            return "Calendar not connected"
+        # Check if user is authenticated with Google
+        user = session.get('user', {})
+        if user.get('provider') != 'google':
+            return "Calendar not connected (Google sign-in required)"
         
         # Get events for the next 7 days
-        events = calendar_service.get_events()
+        events = calendar_service.get_events(session)
         if not events:
             return "No upcoming events in the next 7 days"
         
@@ -388,6 +659,7 @@ def get_calendar_context():
         return "Calendar information temporarily unavailable"
 
 @app.route('/api/calendar/events', methods=['GET'])
+@require_google_auth
 def get_calendar_events():
     """Get calendar events"""
     try:
@@ -396,6 +668,7 @@ def get_calendar_events():
         end_date = start_date + timedelta(days=days)
         
         events = calendar_service.get_events(
+            session,
             time_min=start_date.isoformat() + 'Z',
             time_max=end_date.isoformat() + 'Z'
         )
@@ -410,6 +683,7 @@ def get_calendar_events():
         return jsonify({'error': 'Failed to retrieve calendar events'}), 500
 
 @app.route('/api/calendar/schedule', methods=['POST'])
+@require_google_auth
 def smart_schedule_event():
     """Smart schedule a new event"""
     try:
@@ -424,6 +698,7 @@ def smart_schedule_event():
         
         # Find optimal scheduling
         result, error = calendar_service.smart_schedule_event(
+            session,
             summary=summary,
             duration_minutes=duration,
             description=description,
@@ -459,6 +734,7 @@ def smart_schedule_event():
         return jsonify({'error': 'Failed to schedule event'}), 500
 
 @app.route('/api/calendar/create', methods=['POST'])
+@require_google_auth
 def create_calendar_event():
     """Create a new calendar event"""
     try:
@@ -474,6 +750,7 @@ def create_calendar_event():
         
         # Create the event
         event = calendar_service.create_event(
+            session,
             summary=summary,
             start_time=start_time,
             end_time=end_time,
@@ -495,6 +772,7 @@ def create_calendar_event():
         return jsonify({'error': 'Failed to create calendar event'}), 500
 
 @app.route('/api/calendar/update/<event_id>', methods=['PUT'])
+@require_google_auth
 def update_calendar_event(event_id):
     """Update an existing calendar event"""
     try:
@@ -502,6 +780,7 @@ def update_calendar_event(event_id):
         
         # Update the event
         event = calendar_service.update_event(
+            session,
             event_id=event_id,
             summary=data.get('summary'),
             start_time=data.get('start_time'),
@@ -523,10 +802,11 @@ def update_calendar_event(event_id):
         return jsonify({'error': 'Failed to update calendar event'}), 500
 
 @app.route('/api/calendar/delete/<event_id>', methods=['DELETE'])
+@require_google_auth
 def delete_calendar_event(event_id):
     """Delete a calendar event"""
     try:
-        success = calendar_service.delete_event(event_id)
+        success = calendar_service.delete_event(session, event_id)
         
         if not success:
             return jsonify({'error': 'Failed to delete calendar event'}), 500
@@ -538,6 +818,7 @@ def delete_calendar_event(event_id):
         return jsonify({'error': 'Failed to delete calendar event'}), 500
 
 @app.route('/api/calendar/free-slots', methods=['GET'])
+@require_google_auth
 def get_free_slots():
     """Get available time slots"""
     try:
@@ -548,6 +829,7 @@ def get_free_slots():
         end_date = start_date + timedelta(days=days)
         
         free_slots = calendar_service.find_free_slots(
+            session,
             duration_minutes=duration,
             start_date=start_date,
             end_date=end_date
@@ -594,8 +876,9 @@ def enhance_message_with_calendar_context(user_message):
         # Try to get Google Calendar events if available
         calendar_info = ""
         try:
-            if calendar_service.service:
-                events = calendar_service.get_events()
+            user = session.get('user', {})
+            if user.get('provider') == 'google' and session.get('google_calendar_token'):
+                events = calendar_service.get_events(session)
                 if events:
                     calendar_info = "\n\n[Your Google Calendar events:\n"
                     for event in events[:10]:
@@ -603,7 +886,7 @@ def enhance_message_with_calendar_context(user_message):
                         calendar_info += f"- {event['summary']}: {start_time.strftime('%A, %b %d at %I:%M %p')}\n"
                     
                     # Include free time slots
-                    free_slots = calendar_service.find_free_slots(60)
+                    free_slots = calendar_service.find_free_slots(session, 60)
                     if free_slots:
                         calendar_info += "\nAvailable 1-hour+ time slots:\n"
                         for slot in free_slots[:5]:
@@ -647,6 +930,7 @@ def enhance_message_with_calendar_context(user_message):
         return user_message
 
 @app.route('/api/calendar/confirm-schedule', methods=['POST'])
+@require_google_auth
 def confirm_schedule():
     """Confirm and create a scheduled event"""
     try:
@@ -662,6 +946,7 @@ def confirm_schedule():
         
         # Create the event
         event = calendar_service.create_event(
+            session,
             summary=summary,
             start_time=start_time,
             end_time=end_time,
