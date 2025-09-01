@@ -14,6 +14,16 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Zobo">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    
     <!-- Google Drive Picker API -->
     <script src="https://apis.google.com/js/api.js"></script>
     
@@ -35,6 +45,9 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <button class="action-btn" id="timerBtn" title="Timer & Alarms" data-bs-toggle="modal" data-bs-target="#timerModal">
+                        <i class="fas fa-clock"></i>
+                    </button>
                     <button class="action-btn" id="voiceStatusBtn" title="Voice API Status">
                         <i class="fas fa-microphone"></i>
                     </button>
@@ -146,10 +159,151 @@
         </div>
     </div>
 
+    <!-- Timer/Alarm Modal -->
+    <div class="modal fade" id="timerModal" tabindex="-1" aria-labelledby="timerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <ul class="nav nav-tabs" id="timerTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="timer-tab" data-bs-toggle="tab" data-bs-target="#timer-pane" type="button" role="tab">
+                                <i class="fas fa-hourglass-half me-2"></i>Timer
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="alarm-tab" data-bs-toggle="tab" data-bs-target="#alarm-pane" type="button" role="tab">
+                                <i class="fas fa-bell me-2"></i>Alarm
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="stopwatch-tab" data-bs-toggle="tab" data-bs-target="#stopwatch-pane" type="button" role="tab">
+                                <i class="fas fa-stopwatch me-2"></i>Stopwatch
+                            </button>
+                        </li>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="tab-content" id="timerTabsContent">
+                        <!-- Timer Tab -->
+                        <div class="tab-pane fade show active" id="timer-pane" role="tabpanel">
+                            <div class="timer-controls">
+                                <div class="timer-display">
+                                    <span id="timerDisplay">00:00</span>
+                                </div>
+                                <div class="timer-inputs mb-3">
+                                    <div class="row g-2">
+                                        <div class="col">
+                                            <input type="number" class="form-control" id="timerHours" min="0" max="23" value="0" placeholder="Hours">
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" class="form-control" id="timerMinutes" min="0" max="59" value="5" placeholder="Minutes">
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" class="form-control" id="timerSeconds" min="0" max="59" value="0" placeholder="Seconds">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="timerName" placeholder="Timer name (optional)">
+                                </div>
+                                <div class="timer-buttons">
+                                    <button class="btn btn-primary" id="startTimerBtn">Start Timer</button>
+                                    <button class="btn btn-warning d-none" id="pauseTimerBtn">Pause</button>
+                                    <button class="btn btn-danger d-none" id="stopTimerBtn">Stop</button>
+                                </div>
+                            </div>
+                            <div id="activeTimers" class="mt-4">
+                                <h6>Active Timers</h6>
+                                <div id="timerList"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Alarm Tab -->
+                        <div class="tab-pane fade" id="alarm-pane" role="tabpanel">
+                            <div class="alarm-controls">
+                                <div class="alarm-inputs mb-3">
+                                    <div class="row g-2">
+                                        <div class="col">
+                                            <input type="time" class="form-control" id="alarmTime">
+                                        </div>
+                                        <div class="col">
+                                            <input type="text" class="form-control" id="alarmName" placeholder="Alarm name">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <select class="form-select" id="alarmRepeat">
+                                        <option value="none">One time</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekdays">Weekdays</option>
+                                        <option value="weekly">Weekly</option>
+                                    </select>
+                                </div>
+                                <div class="alarm-buttons">
+                                    <button class="btn btn-primary" id="setAlarmBtn">Set Alarm</button>
+                                </div>
+                            </div>
+                            <div id="activeAlarms" class="mt-4">
+                                <h6>Active Alarms</h6>
+                                <div id="alarmList"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stopwatch Tab -->
+                        <div class="tab-pane fade" id="stopwatch-pane" role="tabpanel">
+                            <div class="stopwatch-controls">
+                                <div class="stopwatch-display">
+                                    <span id="stopwatchDisplay">00:00:00</span>
+                                </div>
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="stopwatchName" placeholder="Stopwatch name (optional)">
+                                </div>
+                                <div class="stopwatch-buttons">
+                                    <button class="btn btn-success" id="startStopwatchBtn">Start</button>
+                                    <button class="btn btn-warning d-none" id="pauseStopwatchBtn">Pause</button>
+                                    <button class="btn btn-danger d-none" id="resetStopwatchBtn">Reset</button>
+                                </div>
+                            </div>
+                            <div id="stopwatchLaps" class="mt-4">
+                                <h6>Lap Times</h6>
+                                <div id="lapsList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/timer.js') }}"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+        
+        // PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button or notification
+        });
+    </script>
 </body>
 </html>

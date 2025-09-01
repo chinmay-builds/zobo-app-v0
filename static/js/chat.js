@@ -70,6 +70,16 @@ class ChatApp {
             }
         });
         
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + T to open timer modal
+            if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+                e.preventDefault();
+                const timerModal = new bootstrap.Modal(document.getElementById('timerModal'));
+                timerModal.show();
+            }
+        });
+        
         // File attachment handlers
         this.localFileBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -790,6 +800,17 @@ class ChatApp {
             const data = await response.json();
             
             if (response.ok) {
+                // Check for timer/alarm commands first
+                if (data.transcript && window.timerManager) {
+                    const timerResponse = window.timerManager.processVoiceCommand(data.transcript);
+                    if (timerResponse) {
+                        this.addMessage(`🎤 "${data.transcript}"`, 'user');
+                        this.addMessage(`⏰ ${timerResponse}`, 'assistant');
+                        this.showStatusAlert('⏰ Timer command executed!', 'success');
+                        return;
+                    }
+                }
+                
                 if (data.audio) {
                     // Play the audio response
                     const audio = new Audio(`data:audio/wav;base64,${data.audio}`);

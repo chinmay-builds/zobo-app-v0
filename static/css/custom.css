@@ -582,3 +582,162 @@ body {
     border-color: #16a34a;
     color: #86efac;
 }
+
+/* Timer/Alarm Modal Styles */
+.timer-display, .stopwatch-display {
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 600;
+    color: #007bff;
+    background: #2d2d2d;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+}
+
+.timer-inputs .form-control {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #e8eaed;
+    text-align: center;
+}
+
+.timer-inputs .form-control:focus {
+    background: #2d2d2d;
+    border-color: #007bff;
+    color: #e8eaed;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.timer-controls, .alarm-controls, .stopwatch-controls {
+    padding: 1rem;
+    background: #2a2a2a;
+    border-radius: 8px;
+}
+
+.timer-buttons, .alarm-buttons, .stopwatch-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.timer-item, .alarm-item {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.timer-item:hover, .alarm-item:hover {
+    border-color: #007bff;
+}
+
+#timerTabs .nav-link {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #9aa0a6;
+    margin-right: 4px;
+}
+
+#timerTabs .nav-link.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+#timerTabs .nav-link:hover {
+    border-color: #007bff;
+    color: #e8eaed;
+}
+
+.modal-content {
+    background: #1a1a1a;
+    border: 1px solid #404040;
+}
+
+.modal-header {
+    border-bottom: 1px solid #404040;
+    background: #2d2d2d;
+}
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.form-control, .form-select {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #e8eaed;
+}
+
+.form-control:focus, .form-select:focus {
+    background: #2d2d2d;
+    border-color: #007bff;
+    color: #e8eaed;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.lap-item {
+    padding: 0.25rem 0.5rem;
+    background: #2d2d2d;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+}
+
+/* Mobile Timer Styles */
+@media (max-width: 768px) {
+    .timer-display, .stopwatch-display {
+        font-size: 2rem;
+        padding: 0.75rem;
+    }
+    
+    .timer-buttons, .alarm-buttons, .stopwatch-buttons {
+        flex-direction: column;
+    }
+    
+    .timer-inputs .row {
+        margin: 0 -0.25rem;
+    }
+    
+    .timer-inputs .col {
+        padding: 0 0.25rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Notification Styles */
+.notification-permission-dialog {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1060;
+    max-width: 350px;
+}
+
+/* Timer status indicators */
+.timer-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #28a745;
+    display: inline-block;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+}
+
+.timer-status-indicator.paused {
+    background: #ffc107;
+    animation: none;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}

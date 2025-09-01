@@ -467,6 +467,16 @@ calendar_service = GoogleCalendarService()
 # Initialize Voice API client
 voice_client = GeminiLiveAPI(GEMINI_API_KEY) if GEMINI_API_KEY else None
 
+@app.route('/sw.js')
+def service_worker():
+    """Serve the service worker with correct MIME type"""
+    return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
+
+@app.route('/manifest.json')
+def manifest():
+    """Serve the web app manifest"""
+    return app.send_static_file('manifest.json'), 200, {'Content-Type': 'application/json'}
+
 @app.route('/')
 @require_auth
 def index():
