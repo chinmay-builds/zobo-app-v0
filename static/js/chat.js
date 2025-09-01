@@ -811,6 +811,17 @@ class ChatApp {
                     }
                 }
                 
+                // Check for settings commands
+                if (data.transcript && window.settingsManager) {
+                    const settingsResponse = window.settingsManager.processVoiceCommand(data.transcript);
+                    if (settingsResponse) {
+                        this.addMessage(`🎤 "${data.transcript}"`, 'user');
+                        this.addMessage(`⚙️ ${settingsResponse}`, 'assistant');
+                        this.showStatusAlert('⚙️ Settings updated!', 'success');
+                        return;
+                    }
+                }
+                
                 if (data.audio) {
                     // Play the audio response
                     const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
