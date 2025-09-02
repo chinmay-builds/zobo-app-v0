@@ -213,6 +213,11 @@ class ChatApp {
         
         this.messagesArea.appendChild(messageDiv);
         this.scrollToBottom();
+
+        // Trigger auto-save event
+        document.dispatchEvent(new CustomEvent('messageAdded', {
+            detail: { content, type, timestamp: currentTime }
+        }));
     }
     
     formatMessage(content) {

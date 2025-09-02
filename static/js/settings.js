@@ -115,6 +115,51 @@ class SettingsManager {
             });
         }
 
+        // Auto-save controls
+        const autoSaveSwitch = document.getElementById('autoSaveSwitch');
+        if (autoSaveSwitch) {
+            autoSaveSwitch.addEventListener('change', (e) => {
+                if (window.autoSaveManager) {
+                    if (e.target.checked) {
+                        window.autoSaveManager.enableAutoSave();
+                    } else {
+                        window.autoSaveManager.disableAutoSave();
+                    }
+                }
+            });
+        }
+
+        const draftSaveSwitch = document.getElementById('draftSaveSwitch');
+        if (draftSaveSwitch) {
+            draftSaveSwitch.addEventListener('change', (e) => {
+                if (window.autoSaveManager) {
+                    window.autoSaveManager.draftSaveEnabled = e.target.checked;
+                    window.autoSaveManager.updateAutoSaveStatus(
+                        e.target.checked ? 'Draft saving enabled' : 'Draft saving disabled',
+                        e.target.checked ? 'success' : 'warning'
+                    );
+                }
+            });
+        }
+
+        const exportConversationBtn = document.getElementById('exportConversationBtn');
+        if (exportConversationBtn) {
+            exportConversationBtn.addEventListener('click', () => {
+                if (window.autoSaveManager) {
+                    window.autoSaveManager.exportConversation();
+                }
+            });
+        }
+
+        const clearAutoSaveBtn = document.getElementById('clearAutoSaveBtn');
+        if (clearAutoSaveBtn) {
+            clearAutoSaveBtn.addEventListener('click', () => {
+                if (window.autoSaveManager) {
+                    window.autoSaveManager.clearAllSaved();
+                }
+            });
+        }
+
         // Reset settings button
         const resetBtn = document.getElementById('resetSettingsBtn');
         if (resetBtn) {

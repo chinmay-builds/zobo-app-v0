@@ -409,6 +409,43 @@
                             </div>
                             <div class="form-text">Reduce spacing between messages</div>
                         </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h6 class="settings-section-title">
+                            <i class="fas fa-save me-2"></i>Auto-Save & Data
+                        </h6>
+                        <div class="setting-item">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoSaveSwitch" checked>
+                                <label class="form-check-label" for="autoSaveSwitch">
+                                    Auto-Save Conversations
+                                </label>
+                            </div>
+                            <div class="form-text">Automatically save your chat history locally</div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="draftSaveSwitch" checked>
+                                <label class="form-check-label" for="draftSaveSwitch">
+                                    Save Message Drafts
+                                </label>
+                            </div>
+                            <div class="form-text">Save unfinished messages as you type</div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-info btn-sm" id="exportConversationBtn">
+                                    <i class="fas fa-download me-1"></i>Export Chat
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm" id="clearAutoSaveBtn">
+                                    <i class="fas fa-trash me-1"></i>Clear Saved Data
+                                </button>
+                            </div>
+                            <div class="form-text">Export conversations or clear all saved local data</div>
+                        </div>
                         
                         <div class="setting-item">
                             <div class="d-flex gap-2">
@@ -438,6 +475,7 @@
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/timer.js') }}"></script>
     <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/autosave.js') }}"></script>
     
     <!-- Service Worker Registration -->
     <script>

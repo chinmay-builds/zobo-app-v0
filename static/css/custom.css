@@ -940,3 +940,111 @@ body.user-red {
     border: 1px solid var(--bg-tertiary);
     border-radius: 4px;
 }
+
+/* Auto-Save Status Styling */
+.auto-save-status {
+    position: absolute;
+    right: 120px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.auto-save-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+
+.auto-save-indicator i {
+    font-size: 10px;
+}
+
+.auto-save-indicator i.fa-check-circle {
+    color: #16a34a;
+}
+
+.auto-save-indicator i.fa-exclamation-circle {
+    color: #dc2626;
+}
+
+.auto-save-indicator i.fa-exclamation-triangle {
+    color: #f59e0b;
+}
+
+.auto-save-indicator i.fa-save {
+    color: #3b82f6;
+}
+
+.auto-save-text {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Auto-save pulse animation */
+@keyframes autoSavePulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.auto-save-indicator.saving {
+    animation: autoSavePulse 1.5s infinite;
+}
+
+/* Restore dialog styling */
+.restore-options {
+    margin-top: 1rem;
+}
+
+.restore-options .form-check {
+    margin-bottom: 0.75rem;
+}
+
+.restore-options .form-check-label {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+/* Mobile auto-save status */
+@media (max-width: 768px) {
+    .auto-save-status {
+        right: 10px;
+        position: relative;
+        transform: none;
+        margin-left: auto;
+    }
+    
+    .auto-save-indicator {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    
+    .auto-save-text {
+        display: none;
+    }
+}
+
+/* Draft saved indicator */
+.draft-indicator {
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.draft-indicator.show {
+    opacity: 1;
+}
