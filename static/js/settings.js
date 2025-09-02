@@ -3,7 +3,13 @@ class SettingsManager {
         this.defaultSettings = {
             fontFamily: 'Inter',
             fontSize: 'medium',
-            compactMode: false
+            compactMode: false,
+            backgroundTheme: 'dark',
+            assistantBubbleColor: 'default',
+            userBubbleColor: 'default',
+            customBgColor: '#1a1a1a',
+            customAssistantColor: '#2d2d2d',
+            customUserColor: '#1e3a8a'
         };
         
         this.currentSettings = { ...this.defaultSettings };
@@ -39,6 +45,73 @@ class SettingsManager {
         if (compactModeSwitch) {
             compactModeSwitch.addEventListener('change', (e) => {
                 this.updateSetting('compactMode', e.target.checked);
+            });
+        }
+
+        // Background theme selector
+        const backgroundThemeSelect = document.getElementById('backgroundThemeSelect');
+        if (backgroundThemeSelect) {
+            backgroundThemeSelect.addEventListener('change', (e) => {
+                this.updateSetting('backgroundTheme', e.target.value);
+                this.toggleCustomColorPicker('bg', e.target.value === 'custom-bg');
+            });
+        }
+
+        // Custom background color picker
+        const customBgColor = document.getElementById('customBgColor');
+        if (customBgColor) {
+            customBgColor.addEventListener('change', (e) => {
+                this.updateSetting('customBgColor', e.target.value);
+            });
+        }
+
+        // Assistant bubble color selector
+        const assistantBubbleSelect = document.getElementById('assistantBubbleSelect');
+        if (assistantBubbleSelect) {
+            assistantBubbleSelect.addEventListener('change', (e) => {
+                this.updateSetting('assistantBubbleColor', e.target.value);
+                this.toggleCustomColorPicker('assistant', e.target.value === 'custom-assistant');
+            });
+        }
+
+        // Custom assistant color picker
+        const customAssistantColor = document.getElementById('customAssistantColor');
+        if (customAssistantColor) {
+            customAssistantColor.addEventListener('change', (e) => {
+                this.updateSetting('customAssistantColor', e.target.value);
+            });
+        }
+
+        // User bubble color selector
+        const userBubbleSelect = document.getElementById('userBubbleSelect');
+        if (userBubbleSelect) {
+            userBubbleSelect.addEventListener('change', (e) => {
+                this.updateSetting('userBubbleColor', e.target.value);
+                this.toggleCustomColorPicker('user', e.target.value === 'custom-user');
+            });
+        }
+
+        // Custom user color picker
+        const customUserColor = document.getElementById('customUserColor');
+        if (customUserColor) {
+            customUserColor.addEventListener('change', (e) => {
+                this.updateSetting('customUserColor', e.target.value);
+            });
+        }
+
+        // Preview colors button
+        const previewColorsBtn = document.getElementById('previewColorsBtn');
+        if (previewColorsBtn) {
+            previewColorsBtn.addEventListener('click', () => {
+                this.previewColors();
+            });
+        }
+
+        // Reset colors button
+        const resetColorsBtn = document.getElementById('resetColorsBtn');
+        if (resetColorsBtn) {
+            resetColorsBtn.addEventListener('click', () => {
+                this.resetColors();
             });
         }
 
@@ -78,6 +151,12 @@ class SettingsManager {
         } else {
             body.classList.remove('compact-mode');
         }
+
+        // Apply background theme
+        this.applyBackgroundTheme(this.currentSettings.backgroundTheme);
+        
+        // Apply bubble colors
+        this.applyBubbleColors();
     }
 
     applyFontFamily(fontFamily) {
@@ -108,6 +187,90 @@ class SettingsManager {
         document.documentElement.style.setProperty('--primary-font-family', fontStack);
     }
 
+    applyBackgroundTheme(theme) {
+        const body = document.body;
+        
+        // Remove existing theme classes
+        body.className = body.className.replace(/theme-[\w-]+/g, '');
+        
+        if (theme === 'custom-bg') {
+            document.documentElement.style.setProperty('--bg-primary', this.currentSettings.customBgColor);
+            document.documentElement.style.setProperty('--bg-secondary', this.adjustBrightness(this.currentSettings.customBgColor, 20));
+            document.documentElement.style.setProperty('--bg-tertiary', this.adjustBrightness(this.currentSettings.customBgColor, 40));
+        } else if (theme !== 'dark') {
+            body.classList.add(`theme-${theme}`);
+        }
+    }
+
+    applyBubbleColors() {
+        const body = document.body;
+        
+        // Remove existing bubble color classes
+        body.className = body.className.replace(/assistant-[\w-]+|user-[\w-]+/g, '');
+        
+        // Apply assistant bubble color
+        if (this.currentSettings.assistantBubbleColor === 'custom-assistant') {
+            document.documentElement.style.setProperty('--assistant-bubble-bg', this.currentSettings.customAssistantColor);
+            document.documentElement.style.setProperty('--assistant-bubble-border', this.adjustBrightness(this.currentSettings.customAssistantColor, 30));
+            document.documentElement.style.setProperty('--assistant-bubble-text', this.getContrastColor(this.currentSettings.customAssistantColor));
+        } else if (this.currentSettings.assistantBubbleColor !== 'default') {
+            body.classList.add(`assistant-${this.currentSettings.assistantBubbleColor}`);
+        }
+        
+        // Apply user bubble color
+        if (this.currentSettings.userBubbleColor === 'custom-user') {
+            document.documentElement.style.setProperty('--user-bubble-bg', this.currentSettings.customUserColor);
+            document.documentElement.style.setProperty('--user-bubble-border', this.adjustBrightness(this.currentSettings.customUserColor, 20));
+            document.documentElement.style.setProperty('--user-bubble-text', this.getContrastColor(this.currentSettings.customUserColor));
+        } else if (this.currentSettings.userBubbleColor !== 'default') {
+            body.classList.add(`user-${this.currentSettings.userBubbleColor}`);
+        }
+    }
+
+    adjustBrightness(hex, percent) {
+        // Convert hex to RGB
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        
+        // Adjust brightness
+        const newR = Math.min(255, Math.max(0, r + (r * percent / 100)));
+        const newG = Math.min(255, Math.max(0, g + (g * percent / 100)));
+        const newB = Math.min(255, Math.max(0, b + (b * percent / 100)));
+        
+        // Convert back to hex
+        return `#${Math.round(newR).toString(16).padStart(2, '0')}${Math.round(newG).toString(16).padStart(2, '0')}${Math.round(newB).toString(16).padStart(2, '0')}`;
+    }
+
+    getContrastColor(hex) {
+        // Convert hex to RGB
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        
+        // Calculate relative luminance
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        return luminance > 0.5 ? '#000000' : '#ffffff';
+    }
+
+    toggleCustomColorPicker(type, show) {
+        const pickerMap = {
+            'bg': 'customBgColorPicker',
+            'assistant': 'customAssistantColorPicker',
+            'user': 'customUserColorPicker'
+        };
+        
+        const picker = document.getElementById(pickerMap[type]);
+        if (picker) {
+            if (show) {
+                picker.classList.remove('d-none');
+            } else {
+                picker.classList.add('d-none');
+            }
+        }
+    }
+
     updateUI() {
         // Update font selector
         const fontSelect = document.getElementById('fontSelect');
@@ -125,6 +288,45 @@ class SettingsManager {
         const compactModeSwitch = document.getElementById('compactModeSwitch');
         if (compactModeSwitch) {
             compactModeSwitch.checked = this.currentSettings.compactMode;
+        }
+
+        // Update background theme selector
+        const backgroundThemeSelect = document.getElementById('backgroundThemeSelect');
+        if (backgroundThemeSelect) {
+            backgroundThemeSelect.value = this.currentSettings.backgroundTheme;
+            this.toggleCustomColorPicker('bg', this.currentSettings.backgroundTheme === 'custom-bg');
+        }
+
+        // Update custom background color
+        const customBgColor = document.getElementById('customBgColor');
+        if (customBgColor) {
+            customBgColor.value = this.currentSettings.customBgColor;
+        }
+
+        // Update assistant bubble color selector
+        const assistantBubbleSelect = document.getElementById('assistantBubbleSelect');
+        if (assistantBubbleSelect) {
+            assistantBubbleSelect.value = this.currentSettings.assistantBubbleColor;
+            this.toggleCustomColorPicker('assistant', this.currentSettings.assistantBubbleColor === 'custom-assistant');
+        }
+
+        // Update custom assistant color
+        const customAssistantColor = document.getElementById('customAssistantColor');
+        if (customAssistantColor) {
+            customAssistantColor.value = this.currentSettings.customAssistantColor;
+        }
+
+        // Update user bubble color selector
+        const userBubbleSelect = document.getElementById('userBubbleSelect');
+        if (userBubbleSelect) {
+            userBubbleSelect.value = this.currentSettings.userBubbleColor;
+            this.toggleCustomColorPicker('user', this.currentSettings.userBubbleColor === 'custom-user');
+        }
+
+        // Update custom user color
+        const customUserColor = document.getElementById('customUserColor');
+        if (customUserColor) {
+            customUserColor.value = this.currentSettings.customUserColor;
         }
     }
 
@@ -297,6 +499,83 @@ class SettingsManager {
         }
 
         return null; // No settings command found
+    }
+
+    previewColors() {
+        // Add a temporary preview message to show color changes
+        const messagesArea = document.getElementById('messagesArea');
+        if (messagesArea) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'message assistant-message';
+            previewDiv.innerHTML = `
+                <div class="message-avatar">
+                    <div class="avatar-circle">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-name">Preview</span>
+                        <span class="message-time">Now</span>
+                    </div>
+                    <div class="message-text">
+                        This is how AI messages will look with your current color settings.
+                    </div>
+                </div>
+            `;
+            
+            const userPreviewDiv = document.createElement('div');
+            userPreviewDiv.className = 'message user-message';
+            userPreviewDiv.innerHTML = `
+                <div class="message-avatar">
+                    <div class="avatar-circle">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-name">You</span>
+                        <span class="message-time">Now</span>
+                    </div>
+                    <div class="message-text">
+                        This is how your messages will look with the selected colors.
+                    </div>
+                </div>
+            `;
+
+            messagesArea.appendChild(previewDiv);
+            messagesArea.appendChild(userPreviewDiv);
+
+            // Auto-remove preview after 5 seconds
+            setTimeout(() => {
+                if (previewDiv.parentNode) previewDiv.remove();
+                if (userPreviewDiv.parentNode) userPreviewDiv.remove();
+            }, 5000);
+
+            // Scroll to bottom to show preview
+            const chatContainer = document.getElementById('chatContainer');
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        this.showSettingsSaved('Color preview added to chat');
+    }
+
+    resetColors() {
+        if (confirm('Reset all colors to defaults?')) {
+            this.currentSettings.backgroundTheme = this.defaultSettings.backgroundTheme;
+            this.currentSettings.assistantBubbleColor = this.defaultSettings.assistantBubbleColor;
+            this.currentSettings.userBubbleColor = this.defaultSettings.userBubbleColor;
+            this.currentSettings.customBgColor = this.defaultSettings.customBgColor;
+            this.currentSettings.customAssistantColor = this.defaultSettings.customAssistantColor;
+            this.currentSettings.customUserColor = this.defaultSettings.customUserColor;
+            
+            this.saveSettings();
+            this.applySettings();
+            this.updateUI();
+            this.showSettingsSaved('Colors reset to defaults');
+        }
     }
 }
 
