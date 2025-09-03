@@ -160,6 +160,19 @@ class SettingsManager {
             });
         }
 
+        const fastLoadSwitch = document.getElementById('fastLoadSwitch');
+        if (fastLoadSwitch) {
+            // Load current setting
+            fastLoadSwitch.checked = localStorage.getItem('zobo-fast-load') === 'true';
+            
+            fastLoadSwitch.addEventListener('change', (e) => {
+                localStorage.setItem('zobo-fast-load', e.target.checked.toString());
+                this.showSettingsSaved(
+                    e.target.checked ? 'Fast loading enabled' : 'Fast loading disabled'
+                );
+            });
+        }
+
         // Reset settings button
         const resetBtn = document.getElementById('resetSettingsBtn');
         if (resetBtn) {

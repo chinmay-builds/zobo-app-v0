@@ -1048,3 +1048,227 @@ body.user-red {
 .draft-indicator.show {
     opacity: 1;
 }
+
+/* Loading Screen Styles */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loading-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.loading-content {
+    text-align: center;
+    max-width: 400px;
+    padding: 2rem;
+}
+
+.loading-logo {
+    margin-bottom: 2rem;
+}
+
+.robot-logo-large {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, #4285f4, #34a853);
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 8px 32px rgba(66, 133, 244, 0.3);
+    animation: logoFloat 3s ease-in-out infinite;
+}
+
+.robot-logo-large i {
+    color: white;
+    font-size: 60px;
+}
+
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.loading-text {
+    margin-bottom: 2rem;
+}
+
+.loading-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+    0% { text-shadow: 0 0 20px rgba(66, 133, 244, 0.5); }
+    100% { text-shadow: 0 0 30px rgba(66, 133, 244, 0.8), 0 0 40px rgba(52, 168, 83, 0.5); }
+}
+
+.loading-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin: 0;
+    opacity: 0.8;
+}
+
+.loading-spinner {
+    margin-bottom: 2rem;
+}
+
+.spinner-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+}
+
+.spinner-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    animation: spin 2s linear infinite;
+}
+
+.spinner-ring:nth-child(1) {
+    border-top-color: #4285f4;
+    animation-duration: 2s;
+}
+
+.spinner-ring:nth-child(2) {
+    border-right-color: #34a853;
+    animation-duration: 2.5s;
+    animation-direction: reverse;
+}
+
+.spinner-ring:nth-child(3) {
+    border-bottom-color: #fbbc05;
+    animation-duration: 1.5s;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-status {
+    margin-bottom: 1.5rem;
+}
+
+.loading-status span {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    opacity: 0.7;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+.loading-progress {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progressShimmer 1.5s infinite;
+}
+
+@keyframes progressShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Loading Screen Responsive Design */
+@media (max-width: 768px) {
+    .loading-content {
+        padding: 1rem;
+    }
+    
+    .robot-logo-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+    }
+    
+    .robot-logo-large i {
+        font-size: 40px;
+    }
+    
+    .loading-title {
+        font-size: 2rem;
+    }
+    
+    .loading-subtitle {
+        font-size: 1rem;
+    }
+    
+    .spinner-container {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .loading-title {
+        font-size: 1.8rem;
+    }
+    
+    .robot-logo-large {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .robot-logo-large i {
+        font-size: 35px;
+    }
+}
