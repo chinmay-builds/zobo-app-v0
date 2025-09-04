@@ -3,6 +3,8 @@ class LoadingManager {
         this.loadingScreen = document.getElementById('loadingScreen');
         this.statusText = document.getElementById('loadingStatusText');
         this.progressFill = document.getElementById('progressFill');
+        this.matrixCanvas = document.getElementById('matrixCanvas');
+        this.matrixCtx = this.matrixCanvas ? this.matrixCanvas.getContext('2d') : null;
         
         this.loadingSteps = [
             { text: 'Initializing Zobo...', duration: 500, progress: 10 },
@@ -18,15 +20,104 @@ class LoadingManager {
         this.totalSteps = this.loadingSteps.length;
         this.isComplete = false;
         
+        // Matrix animation properties
+        this.matrixChars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        this.matrixColumns = [];
+        this.matrixAnimationId = null;
+        
         this.init();
     }
 
     init() {
+        // Initialize Matrix animation
+        this.initMatrix();
+        
         // Start loading sequence
         this.startLoadingSequence();
         
         // Initialize app components
         this.initializeAppComponents();
+    }
+
+    initMatrix() {
+        if (!this.matrixCanvas || !this.matrixCtx) return;
+        
+        // Set canvas size
+        this.resizeMatrix();
+        
+        // Initialize columns
+        const fontSize = 16;
+        const columnCount = Math.floor(this.matrixCanvas.width / fontSize);
+        
+        this.matrixColumns = Array(columnCount).fill(0).map(() => ({
+            y: Math.random() * this.matrixCanvas.height,
+            speed: Math.random() * 3 + 2
+        }));
+        
+        // Start animation
+        this.startMatrixAnimation();
+        
+        // Handle resize
+        window.addEventListener('resize', () => this.resizeMatrix());
+    }
+    
+    resizeMatrix() {
+        if (!this.matrixCanvas) return;
+        
+        this.matrixCanvas.width = this.matrixCanvas.offsetWidth;
+        this.matrixCanvas.height = this.matrixCanvas.offsetHeight;
+    }
+    
+    startMatrixAnimation() {
+        if (!this.matrixCanvas || !this.matrixCtx) return;
+        
+        const animate = () => {
+            this.drawMatrix();
+            this.matrixAnimationId = requestAnimationFrame(animate);
+        };
+        
+        animate();
+    }
+    
+    drawMatrix() {
+        if (!this.matrixCtx || !this.matrixCanvas) return;
+        
+        const ctx = this.matrixCtx;
+        const canvas = this.matrixCanvas;
+        
+        // Fade effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw characters
+        ctx.fillStyle = '#00BFFF'; // Blue color as requested
+        ctx.font = '16px monospace';
+        
+        const fontSize = 16;
+        
+        for (let i = 0; i < this.matrixColumns.length; i++) {
+            const column = this.matrixColumns[i];
+            const char = this.matrixChars[Math.floor(Math.random() * this.matrixChars.length)];
+            const x = i * fontSize;
+            
+            ctx.fillText(char, x, column.y);
+            
+            // Move column down
+            column.y += column.speed;
+            
+            // Reset column when it goes off screen
+            if (column.y > canvas.height) {
+                column.y = -fontSize;
+                column.speed = Math.random() * 3 + 2;
+            }
+        }
+    }
+    
+    stopMatrix() {
+        if (this.matrixAnimationId) {
+            cancelAnimationFrame(this.matrixAnimationId);
+            this.matrixAnimationId = null;
+        }
     }
 
     startLoadingSequence() {
@@ -131,6 +222,9 @@ class LoadingManager {
 
     hideLoadingScreen() {
         if (this.loadingScreen) {
+            // Stop Matrix animation
+            this.stopMatrix();
+            
             // Add fade-out class
             this.loadingScreen.classList.add('fade-out');
             
