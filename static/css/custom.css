@@ -251,8 +251,9 @@ body {
 }
 
 .message-content {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 70%;
 }
 
 .message-header {
@@ -282,6 +283,9 @@ body {
     color: var(--assistant-bubble-text);
     border: 1px solid var(--assistant-bubble-border);
     text-align: left;
+    display: inline-block;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 
 .user-message .message-text {
@@ -560,6 +564,10 @@ body {
     .message-text {
         padding: 12px;
         font-size: 14px;
+    }
+    
+    .message-content {
+        max-width: 85%;
     }
 }
 
