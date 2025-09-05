@@ -215,6 +215,11 @@ body {
     animation: fadeIn 0.3s ease-in-out;
 }
 
+.user-message {
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -292,6 +297,14 @@ body {
     background: var(--user-bubble-bg);
     border-color: var(--user-bubble-border);
     color: var(--user-bubble-text);
+}
+
+.user-message .message-content {
+    text-align: right;
+}
+
+.user-message .message-header {
+    justify-content: flex-end;
 }
 
 /* Typing Indicator */
